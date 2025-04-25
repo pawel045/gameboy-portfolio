@@ -52,19 +52,50 @@ export class Screen {
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.font = '20px GameBoyFont';
     ctx.fillStyle = '#4A4A4A';
-
+  
     const lines = this.content.getContent();
-    lines.forEach((line, i) => {
-      if (this.content.state === 'menu') {
-        ctx.fillText(line, 10, 25 + i * 25);
-      }
-      else {
-        ctx.fillText(line, 5, 15 + i * 20);
-      }
-    });
-
-    this.texture.needsUpdate = true;
+  
+    if (this.content.state === 'menu') {
+      // Draw all lines immediately in 'menu' state
+      lines.forEach((line, i) => {
+        ctx.fillText(line, 10, 15 + i * 25);
+      });
+      this.texture.needsUpdate = true;
+    } else if (['about me', 'contact', 'projects'].includes(this.content.state)) {
+      let lineIndex = 0;
+  
+      const drawNextLine = () => {
+        if (lineIndex < lines.length) {
+          const line = lines[lineIndex];
+          let charIndex = 0;
+  
+          // Function to draw each letter one at a time with a delay
+          const drawNextChar = () => {
+            if (charIndex < line.length) {
+              const char = line[charIndex];
+              ctx.fillText(char, charIndex * 8, 15 + lineIndex * 20); // Adjust position per letter
+              this.texture.needsUpdate = true; // Update texture after each letter
+              charIndex++; // Move to the next letter
+              setTimeout(drawNextChar, 15); // 100ms delay between each letter
+            } else {
+              lineIndex++; // Move to the next line after all chars in the current line are drawn
+              setTimeout(drawNextLine, 15); // 300ms delay before drawing the next line
+            }
+          };
+  
+          drawNextChar(); // Start drawing the letters for the current line
+        }
+      };
+  
+      drawNextLine(); // Start drawing lines with delays
+    } else {
+      lines.forEach((line, i) => {
+        ctx.fillText(line, 10, 15 + i * 15);
+        this.texture.needsUpdate = true;
+      });
+    }
   }
+  
 
   moveUp() {
     this.content.moveUp();

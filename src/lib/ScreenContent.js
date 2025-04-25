@@ -1,6 +1,6 @@
 export class ScreenContent {
     constructor() {
-      this.options = ['ABOUT ME', 'PROJECTS', 'SKILLS', 'CONTACT'];
+      this.options = ['ABOUT ME', 'PROJECTS', 'SKILLS', 'CONTACT', 'GAME'];
       this.selectedIndex = 0;
       this.state = 'menu';
     }
@@ -35,6 +35,9 @@ export class ScreenContent {
             case 'CONTACT':
                 this.state = 'contact';
                 break;
+            case 'GAME':
+              this.state = 'game';  
+              break;
             default:
                 this.state = 'menu';
         }
@@ -70,7 +73,10 @@ export class ScreenContent {
         return ['This is my email:', 'proszczyk96@gmail.com', '', '', 'Feel free to write to me :)'];
       }
 
-  
+      if (this.state === 'game') {
+        return ['Hello, this is Game section'];
+      }
+
       return [];
     }
 
