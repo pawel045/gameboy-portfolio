@@ -6,9 +6,9 @@ export class GameBoyBody {
   build() {
     const geometry = new RoundedBoxGeometry(20, 30, 3, 5, 1);
     const material = new THREE.MeshStandardMaterial({
-      color: 0xD4AF7F,              // A soft champagne gold
-      metalness: 0.4,               // Gives it a more metallic look
-      roughness: 0.2                // A bit of shine but not overly glossy
+      color: 0xFF3333,// 0xD4AF7F,              // A soft champagne gold
+      metalness: 0.2,               // Gives it a more metallic look
+      roughness: 0.4                // A bit of shine but not overly glossy
     });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.set(0, 0, 0);
@@ -20,10 +20,12 @@ export class Screen {
   constructor() {
     this.canvas = document.createElement('canvas');
     this.canvas.width = 256;
-    this.canvas.height = 128;
+    this.canvas.height = 140;
     this.ctx = this.canvas.getContext('2d');
     this.texture = new THREE.CanvasTexture(this.canvas);
     this.texture.minFilter = THREE.LinearFilter;
+    this.animationTimeouts = [];
+    this.isRendering = true;
 
     this.material = new THREE.MeshBasicMaterial({
       map: this.texture,
@@ -39,63 +41,127 @@ export class Screen {
     font.load().then((loadedFont) => {
       document.fonts.add(loadedFont);
       this.ctx.font = '10px GameBoyFont';
+      this.ctx.fillStyle = '#707070'; // ✅ Set default fill color
       this.render();
     }).catch((err) => {
       console.error('Font failed to load:', err);
     });
+    
+    this.sqlLogo = new Image();
+    this.sqlLogo.src = '/src/assets/logo/sql.png'; // Adjust path if needed
+    this.sqlLogoLoaded = false;
+
+    this.sqlLogo.onload = () => {
+      this.sqlLogoLoaded = true;
+    };
+
 
     this.render();
   }
 
-  render() {
+  render({ animate = true } = {}) {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     ctx.font = '20px GameBoyFont';
-    ctx.fillStyle = '#4A4A4A';
   
-    const lines = this.content.getContent();
+    let lines = this.content.getContent();
+    if (this.tempOverlayLines?.length) {
+      lines = [...lines, ...this.tempOverlayLines];
+    }
   
-    if (this.content.state === 'menu') {
-      // Draw all lines immediately in 'menu' state
-      lines.forEach((line, i) => {
-        ctx.fillText(line, 10, 15 + i * 25);
-      });
-      this.texture.needsUpdate = true;
-    } else if (['about me', 'contact', 'projects'].includes(this.content.state)) {
-      let lineIndex = 0;
+    const state = this.content.state;
   
-      const drawNextLine = () => {
-        if (lineIndex < lines.length) {
-          const line = lines[lineIndex];
-          let charIndex = 0;
-  
-          // Function to draw each letter one at a time with a delay
-          const drawNextChar = () => {
-            if (charIndex < line.length) {
-              const char = line[charIndex];
-              ctx.fillText(char, charIndex * 8, 15 + lineIndex * 20); // Adjust position per letter
-              this.texture.needsUpdate = true; // Update texture after each letter
-              charIndex++; // Move to the next letter
-              setTimeout(drawNextChar, 15); // 100ms delay between each letter
-            } else {
-              lineIndex++; // Move to the next line after all chars in the current line are drawn
-              setTimeout(drawNextLine, 15); // 300ms delay before drawing the next line
-            }
-          };
-  
-          drawNextChar(); // Start drawing the letters for the current line
-        }
-      };
-  
-      drawNextLine(); // Start drawing lines with delays
+    if (state === 'menu') {
+      this.drawMenu(lines);
+    } else if (['about me', 'contact', 'projects'].includes(state)) {
+      if (animate && state !== 'projects') {
+        this.animateLines(lines);
+      } else {
+        this.drawDefault(lines);
+      }
     } else {
-      lines.forEach((line, i) => {
-        ctx.fillText(line, 10, 15 + i * 15);
-        this.texture.needsUpdate = true;
-      });
+      this.drawDefault(lines);
     }
   }
+
+  stopRender() {
+    this.isRendering = false;
+    this.animationTimeouts.forEach(clearTimeout);
+    this.animationTimeouts = [];
+  }
+
+  drawMenu(lines) {
+    lines.forEach((line, i) => {
+      this.ctx.fillText(line, 10, 25 + i * 25);
+    });
+    this.texture.needsUpdate = true;
+  }
   
+  drawDefault(lines) {
+    lines.forEach((line, i) => {
+      let x = 10;
+      let y = 25 + i * 20;
+  
+      if (this.content.state === 'skills') {
+        const textWidth = this.ctx.measureText(line).width;
+        x = (this.canvas.width - textWidth) / 2;
+        y = this.canvas.height / 2;
+      }
+  
+      this.ctx.fillText(line, x, y);
+    });
+    this.texture.needsUpdate = true;
+  }
+  
+  animateLines(lines) {
+    let lineIndex = 0;
+    
+    const drawNextLine = () => {
+      if (!this.isRendering) return;
+      if (lineIndex < lines.length) {
+        const line = lines[lineIndex];
+        let charIndex = 0;
+  
+        const drawNextChar = () => {
+          if (!this.isRendering) return;
+          if (charIndex < line.length) {
+            const char = line[charIndex];
+            
+            // Conditionally adjust positions for 'contact' state
+            const xPosition = this.content.state === 'contact' ? 10 + charIndex * 8 : charIndex * 8;
+            const yPosition = this.content.state === 'contact' ? 25 + lineIndex * 20 : 13 + lineIndex * 20;
+            
+            // Draw the character at the adjusted position
+            this.ctx.fillText(char, xPosition, yPosition);
+            this.texture.needsUpdate = true;
+            charIndex++;
+            
+            const timeout = setTimeout(drawNextChar, 13);
+            this.animationTimeouts.push(timeout);
+          } else {
+            lineIndex++;
+            const timeout = setTimeout(drawNextLine, 13);
+            this.animationTimeouts.push(timeout);
+          }
+        };
+  
+        drawNextChar();
+      }
+    };
+    
+    this.isRendering = true;
+    drawNextLine();
+  }  
+
+  showTemporaryMessage(message, duration = 1500) {
+    this.tempOverlayLines = [message];
+    this.render({ animate: false });
+  
+    setTimeout(() => {
+      this.tempOverlayLines = [];
+      this.render({ animate: false });
+    }, duration);
+  }  
 
   moveUp() {
     this.content.moveUp();
@@ -132,11 +198,15 @@ export class Screen {
   buildTextPlane() {
     return this.textPlane;
   }
+
+  appendLine(line) {
+    this.lines = [...this.lines, line];
+  }
 }
 
 
 export class Button {
-    constructor(x, y, z, color) {
+    constructor(x, y, z, color = 0x444444) {
       const circleShape = new THREE.Shape();
       circleShape.absarc(0, 0, 1, 0, Math.PI * 2, false);
   
@@ -241,37 +311,66 @@ export class staticButtons {
     }
   
     handleUp() {
-      if (this.screen.content.state === 'menu') {
-        this.screen.moveUp();
+      const state = this.screen.content.state;
+    
+      if (state === 'menu') {
+        this.screen.moveUp(); // Moves the selection up in the menu
+      } else if (state === 'projects') {
+        this.screen.content.moveUp();          // Move selection up in the projects grid
+        this.screen.render({ animate: false }); // Render without animation
       }
     }
   
     handleDown() {
-      if (this.screen.content.state === 'menu') {
-        this.screen.moveDown();
+      const state = this.screen.content.state;
+    
+      if (state === 'menu') {
+        this.screen.moveDown(); // already handles render()
+      } else if (state === 'projects') {
+        this.screen.content.moveDown();           // update selection
+        this.screen.render({ animate: false });   // render without typing animation
       }
     }
-  
-    handleLeft() {
-      if (this.screen.content.state === 'menu') {
-        console.log('⬅️ Left arrow pressed from class');
-      }
-    }
-  
+    
     handleRight() {
-      if (this.screen.content.state === 'menu') {
-        console.log('➡️ Right arrow pressed from class');
+      if (this.screen.content.state === 'skills') {
+        this.screen.content.moveRight();
+        this.screen.render({ animate: false });
       }
     }
+    
+    handleLeft() {
+      if (this.screen.content.state === 'skills') {
+        this.screen.content.moveLeft();
+        this.screen.render({ animate: false });
+      }
+    }   
   
     handleA() {
-      if (this.screen.content.state === 'menu') {
+      const state = this.screen.content.state;
+    
+      if (state === 'menu') {
         this.screen.select();
+      } else if (state === 'contact') {
+        const email = 'proszczyk96@gmail.com';
+        navigator.clipboard.writeText(email).then(() => {
+          this.screen.showTemporaryMessage('Email was copied!');
+        }).catch(err => {
+          console.error('Failed to copy email:', err);
+        });
+      } else if (state === 'projects') {
+        const index = this.screen.content.selectedProjectIndex;
+        const link = this.screen.content.projectLinks[index];
+        if (link) {
+          window.open(link, '_blank');
+        }
       }
-    }
+    }   
   
     handleB() {
-      this.screen.goMenu(); // Always allow going back
+      this.screen.stopRender();   // ✅ Stop ongoing animations
+      this.screen.goMenu();       // ⬅️ Then go back to menu
     }
+    
   }
   

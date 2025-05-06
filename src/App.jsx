@@ -24,9 +24,9 @@ function App() {
     const handler = new ButtonsHandler(screen)
 
     // AB Buttons
-    const aButton = new Button(6, -4, 1.4, 0xB00000);
+    const aButton = new Button(6, -4, 1.4);
     aButton.clickHandler = handler.handleA.bind(handler);
-    const bButton = new Button(3.25, -6, 1.4, 0xB00000);
+    const bButton = new Button(3.25, -6, 1.4);
     bButton.clickHandler = handler.handleB.bind(handler);
 
     // Arrows
