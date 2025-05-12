@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry';
 import { ScreenContent } from './ScreenContent.js';
+import sqlLogo from '/src/assets/logo/sqlLogo.png';
+import pythonLogo from '/src/assets/logo/pythonLogo.png';
+import dwhLogo from '/src/assets/logo/dwhLogo.png';
+import bigdataLogo from '/src/assets/logo/bigdataLogo.png';
+
 
 export class GameBoyBody {
   build() {
@@ -47,14 +52,20 @@ export class Screen {
       console.error('Font failed to load:', err);
     });
     
-    this.sqlLogo = new Image();
-    this.sqlLogo.src = '/src/assets/logo/sql.png'; // Adjust path if needed
-    this.sqlLogoLoaded = false;
-
-    this.sqlLogo.onload = () => {
-      this.sqlLogoLoaded = true;
+    this.skillLogos = {
+      'SQL': { image: new Image(), loaded: false, src: sqlLogo },
+      'Python': { image: new Image(), loaded: false, src: pythonLogo },
+      'Data Warehousing': { image: new Image(), loaded: false, src: dwhLogo },
+      'Big Data Tools': { image: new Image(), loaded: false, src: bigdataLogo },
+      // Add more skills and logos as needed
     };
-
+    
+    Object.keys(this.skillLogos).forEach(skill => {
+      const entry = this.skillLogos[skill];
+      entry.image.onload = () => entry.loaded = true;
+      entry.image.src = entry.src;
+    });
+    
 
     this.render();
   }
@@ -103,6 +114,19 @@ export class Screen {
       let y = 25 + i * 20;
   
       if (this.content.state === 'skills') {
+        for (const skill in this.skillLogos) {
+          const logo = this.skillLogos[skill];
+          if (line.includes(skill) && logo.loaded) {
+            const width = 150;
+            const height = 150;
+            const centerX = (this.canvas.width - width) / 2;
+            const centerY = this.canvas.height / 2 - height / 2;
+            this.ctx.drawImage(logo.image, centerX, centerY, width, height);
+            this.texture.needsUpdate = true;
+            return; // Skip text rendering
+          }
+        }
+  
         const textWidth = this.ctx.measureText(line).width;
         x = (this.canvas.width - textWidth) / 2;
         y = this.canvas.height / 2;
@@ -110,8 +134,12 @@ export class Screen {
   
       this.ctx.fillText(line, x, y);
     });
+  
     this.texture.needsUpdate = true;
   }
+  
+  
+  
   
   animateLines(lines) {
     let lineIndex = 0;

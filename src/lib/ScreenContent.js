@@ -18,8 +18,7 @@ export class ScreenContent {
         '<<      Python      >>',
         '<<        SQL       >>',
         '<< Data Warehousing >>',
-        '<<   Data Modeling  >>',
-        '<<        GCP       >>'
+        '<<  Big Data Tools  >>'
       ];
 
     }
