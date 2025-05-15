@@ -11,7 +11,7 @@ export class GameBoyBody {
   build() {
     const geometry = new RoundedBoxGeometry(20, 30, 3, 5, 1);
     const material = new THREE.MeshStandardMaterial({
-      color: 0xFF3333,// 0xD4AF7F,              // A soft champagne gold
+      color: 0xFF3333,              // A deep red
       metalness: 0.2,               // Gives it a more metallic look
       roughness: 0.4                // A bit of shine but not overly glossy
     });
@@ -46,30 +46,16 @@ export class Screen {
     font.load().then((loadedFont) => {
       document.fonts.add(loadedFont);
       this.ctx.font = '10px GameBoyFont';
-      this.ctx.fillStyle = '#707070'; // ✅ Set default fill color
+      this.ctx.fillStyle = '#909090'; // ✅ Set default fill color
       this.render();
     }).catch((err) => {
       console.error('Font failed to load:', err);
     });
-    
-    this.skillLogos = {
-      'SQL': { image: new Image(), loaded: false, src: sqlLogo },
-      'Python': { image: new Image(), loaded: false, src: pythonLogo },
-      'Data Warehousing': { image: new Image(), loaded: false, src: dwhLogo },
-      'Big Data Tools': { image: new Image(), loaded: false, src: bigdataLogo },
-      // Add more skills and logos as needed
-    };
-    
-    Object.keys(this.skillLogos).forEach(skill => {
-      const entry = this.skillLogos[skill];
-      entry.image.onload = () => entry.loaded = true;
-      entry.image.src = entry.src;
-    });
-    
-
+        
     this.render();
   }
 
+  // Update content on the screen
   render({ animate = true } = {}) {
     const ctx = this.ctx;
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -84,8 +70,8 @@ export class Screen {
   
     if (state === 'menu') {
       this.drawMenu(lines);
-    } else if (['about me', 'contact', 'projects'].includes(state)) {
-      if (animate && state !== 'projects') {
+    } else if (['about me', 'contact', ...this.content.skillNames].includes(state)) {
+      if (animate) {
         this.animateLines(lines);
       } else {
         this.drawDefault(lines);
@@ -95,12 +81,14 @@ export class Screen {
     }
   }
 
+  // If back during showing char-by-char
   stopRender() {
     this.isRendering = false;
     this.animationTimeouts.forEach(clearTimeout);
     this.animationTimeouts = [];
   }
 
+  // Draw main menu with animation of changing option
   drawMenu(lines) {
     lines.forEach((line, i) => {
       this.ctx.fillText(line, 10, 25 + i * 25);
@@ -108,14 +96,15 @@ export class Screen {
     this.texture.needsUpdate = true;
   }
   
+  // Draw in default way - no animation, if Skill section, show pictures
   drawDefault(lines) {
     lines.forEach((line, i) => {
       let x = 10;
       let y = 25 + i * 20;
   
       if (this.content.state === 'skills') {
-        for (const skill in this.skillLogos) {
-          const logo = this.skillLogos[skill];
+        for (const skill in this.content.skillLogos) {
+          const logo = this.content.skillLogos[skill];
           if (line.includes(skill) && logo.loaded) {
             const width = 150;
             const height = 150;
@@ -138,9 +127,7 @@ export class Screen {
     this.texture.needsUpdate = true;
   }
   
-  
-  
-  
+  // Draw in animated way, char-by-char. Like in retro Pokemon games
   animateLines(lines) {
     let lineIndex = 0;
     
@@ -181,7 +168,7 @@ export class Screen {
     drawNextLine();
   }  
 
-  showTemporaryMessage(message, duration = 1500) {
+  showTemporaryMessage(message, duration = 2500) {
     this.tempOverlayLines = [message];
     this.render({ animate: false });
   
@@ -255,8 +242,6 @@ export class Button {
       this.mesh.position.set(x, y, z);
       this.mesh.userData.clickable = true;
       this.mesh.userData.parent = this; // so we can access `click()` later
-
-      // return this.mesh
     }
   
     click() {
@@ -331,74 +316,99 @@ export class staticButtons {
 
         return center
     }
+
+    createButtonLabel(letter) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 64;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#0D0D0D';
+      ctx.font = 'bold 40px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(letter, canvas.width / 2, canvas.height / 2);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+      const geometry = new THREE.PlaneGeometry(1, 1);
+      const mesh = new THREE.Mesh(geometry, material);
+
+      return mesh;
+    }
   }
 
-  export class ButtonsHandler {
-    constructor(screen) {
-      this.screen = screen;
-    }
+export class ButtonsHandler {
+  constructor(screen) {
+    this.screen = screen;
+  }
+
+  handleUp() {
+    const state = this.screen.content.state;
   
-    handleUp() {
-      const state = this.screen.content.state;
-    
-      if (state === 'menu') {
-        this.screen.moveUp(); // Moves the selection up in the menu
-      } else if (state === 'projects') {
-        this.screen.content.moveUp();          // Move selection up in the projects grid
-        this.screen.render({ animate: false }); // Render without animation
+    if (state === 'menu') {
+      this.screen.moveUp(); // Moves the selection up in the menu
+    } else if (state === 'projects') {
+      this.screen.content.moveUp();          // Move selection up in the projects grid
+      this.screen.render({ animate: false }); // Render without animation
+    }
+  }
+
+  handleDown() {
+    const state = this.screen.content.state;
+  
+    if (state === 'menu') {
+      this.screen.moveDown(); // already handles render()
+    } else if (state === 'projects') {
+      this.screen.content.moveDown();           // update selection
+      this.screen.render({ animate: false });   // render without typing animation
+    }
+  }
+  
+  handleRight() {
+    if (this.screen.content.state === 'skills') {
+      this.screen.content.moveRight();
+      this.screen.render({ animate: false });
+    }
+  }
+  
+  handleLeft() {
+    if (this.screen.content.state === 'skills') {
+      this.screen.content.moveLeft();
+      this.screen.render({ animate: false });
+    }
+  }   
+
+  handleA() {
+    const state = this.screen.content.state;
+  
+    if (state === 'menu' || state === 'skills') {
+      this.screen.select();
+    } else if (state === 'contact') {
+      const email = 'proszczyk96@gmail.com';
+      navigator.clipboard.writeText(email).then(() => {
+        this.screen.showTemporaryMessage('Email was copied!');
+      }).catch(err => {
+        console.error('Failed to copy email:', err);
+      });
+    } else if (state === 'projects') {
+      const index = this.screen.content.selectedProjectIndex;
+      const link = this.screen.content.projectLinks[index];
+      if (link) {
+        window.open(link, '_blank');
       }
     }
-  
-    handleDown() {
-      const state = this.screen.content.state;
-    
-      if (state === 'menu') {
-        this.screen.moveDown(); // already handles render()
-      } else if (state === 'projects') {
-        this.screen.content.moveDown();           // update selection
-        this.screen.render({ animate: false });   // render without typing animation
-      }
-    }
-    
-    handleRight() {
-      if (this.screen.content.state === 'skills') {
-        this.screen.content.moveRight();
-        this.screen.render({ animate: false });
-      }
-    }
-    
-    handleLeft() {
-      if (this.screen.content.state === 'skills') {
-        this.screen.content.moveLeft();
-        this.screen.render({ animate: false });
-      }
-    }   
-  
-    handleA() {
-      const state = this.screen.content.state;
-    
-      if (state === 'menu') {
-        this.screen.select();
-      } else if (state === 'contact') {
-        const email = 'proszczyk96@gmail.com';
-        navigator.clipboard.writeText(email).then(() => {
-          this.screen.showTemporaryMessage('Email was copied!');
-        }).catch(err => {
-          console.error('Failed to copy email:', err);
-        });
-      } else if (state === 'projects') {
-        const index = this.screen.content.selectedProjectIndex;
-        const link = this.screen.content.projectLinks[index];
-        if (link) {
-          window.open(link, '_blank');
-        }
-      }
-    }   
-  
-    handleB() {
+  }   
+
+  handleB() {
+    const state = this.screen.content.state;
+
+    if (['skills_python', 'skills_sql', 'skills_dwh', 'skills_bdt'].includes(state)) {
+      this.screen.stopRender();
+      this.screen.select();
+    } else {
       this.screen.stopRender();   // ✅ Stop ongoing animations
       this.screen.goMenu();       // ⬅️ Then go back to menu
-    }
-    
-  }
+  }}
+}
   

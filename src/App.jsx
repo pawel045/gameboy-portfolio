@@ -1,3 +1,4 @@
+import './App.css';
 import { useEffect } from 'react';
 import * as THREE from 'three';
 import SceneInit from './lib/SceneInit';
@@ -29,6 +30,11 @@ function App() {
     const bButton = new Button(3.25, -6, 1.4);
     bButton.clickHandler = handler.handleB.bind(handler);
 
+    const aLabel = buttons.createButtonLabel('A')
+    const bLabel = buttons.createButtonLabel('B')
+    aLabel.position.set(aButton.mesh.position.x, aButton.mesh.position.y - 1.8, aButton.mesh.position.z + 0.11);
+    bLabel.position.set(bButton.mesh.position.x, bButton.mesh.position.y - 1.8, bButton.mesh.position.z + 0.11);
+
     // Arrows
     const arrows = new Arrows();
     arrows.up.clickHandler = handler.handleUp.bind(handler);
@@ -46,6 +52,8 @@ function App() {
       textPlane,
       aButton.mesh,
       bButton.mesh,
+      aLabel,
+      bLabel,
       startButton,
       stopButton,
       centerDPad,
@@ -53,7 +61,7 @@ function App() {
     ];
     meshes.forEach(mesh => test.scene.add(mesh));
 
-    // === Click detection setup ===
+    // Click detection setup
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     const clickable = [aButton.mesh, bButton.mesh, ...arrowsMeshes];

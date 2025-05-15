@@ -3,22 +3,18 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
 export default class SceneInit {
   constructor(canvasId) {
-    // NOTE: Core components to initialize Three.js app.
+    // Core components to initialize Three.js app.
     this.scene = undefined;
     this.camera = undefined;
     this.renderer = undefined;
 
-    // NOTE: Camera params;
+    // Camera params;
     this.fov = 45;
     this.nearPlane = 1;
     this.farPlane = 1000;
     this.canvasId = canvasId;
 
-    // NOTE: Additional components.
-    this.clock = undefined;
-    this.controls = undefined;
-
-    // NOTE: Lighting is basically required.
+    // Lighting
     this.ambientLight = undefined;
     this.directionalLight = undefined;
   }
@@ -37,12 +33,12 @@ export default class SceneInit {
     this.camera.position.set(0, 12, isMobile ? 60: 40); // moved up by 12 units
     this.camera.lookAt(0, 0, 0);         // look at the center of the scene
 
-    // NOTE: Specify a canvas which is already created in the HTML.
+    // Specify a canvas which is already created in the HTML.
     const canvas = document.getElementById(this.canvasId);
     this.renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
-      alfa: true,
+      alpha: true,
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
@@ -58,7 +54,6 @@ export default class SceneInit {
 
     // ambient light which is for the whole scene
     this.ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-    // this.ambientLight.castShadow = true;
     this.scene.add(this.ambientLight);
 
     // directional light - parallel sun rays
@@ -68,11 +63,9 @@ export default class SceneInit {
 
     // if window resizes
     window.addEventListener('resize', () => this.onWindowResize(), false);
-    
   }
 
   animate() {
-    // NOTE: Window is implied.
     window.requestAnimationFrame(this.animate.bind(this));
     this.render();
     this.controls.update();
@@ -80,7 +73,7 @@ export default class SceneInit {
   }
 
   render() {
-    // NOTE: Update uniform data on each render.
+    // Update data on each render.
     this.renderer.render(this.scene, this.camera);
   }
 
