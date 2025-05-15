@@ -42,7 +42,7 @@ export class Screen {
 
     this.content = new ScreenContent(); // 👈 Injected logic
 
-    const font = new FontFace('GameBoyFont', 'url(/fonts/VT323.ttf)');
+    const font = new FontFace('GameBoyFont', 'url(./fonts/VT323.ttf)');
     font.load().then((loadedFont) => {
       document.fonts.add(loadedFont);
       this.ctx.font = '10px GameBoyFont';
